@@ -1,0 +1,186 @@
+import tkinter as tk
+from tkinter import ttk
+
+
+class LabelInput(tk.Frame):
+    """A widget containing a label and input together."""
+
+    def __init__(self, parent, label='', input_class=ttk.Entry,
+                 input_var=None, input_args=None, label_args=None,
+                 **kwargs):
+        super().__init__(parent, **kwargs)
+        input_args = input_args or {}
+        label_args = label_args or {}
+        self.variable = input_var
+        
+
+        if input_class in (ttk.Checkbutton, ttk.Button, ttk.Radiobutton):
+            input_args["text"] = label
+            input_args["variable"] = input_var
+        else:
+            self.label = ttk.Label(self, text=label, **label_args)
+            self.label.grid(row=0, column=0, sticky=(tk.W + tk.E))
+            input_args["textvariable"] = input_var
+
+        self.input = input_class(self, **input_args)
+        self.input.grid(row=1, column=0, sticky=(tk.W + tk.E))
+        self.columnconfigure(0, weight=1)
+
+    def grid(self, sticky=(tk.E + tk.W), **kwargs):
+        super().grid(sticky=sticky, **kwargs)
+
+    def get(self):
+        if self.variable:
+            return self.variable.get()
+        # elif type(self.input) == tk.Text:
+        #     return self.input.get('1.0', tk.END)
+        else:
+            return self.input.get()
+
+    def set(self, value, *args, **kwargs):
+        if type(self.variable) == tk.BooleanVar:
+                self.variable.set(bool(value))
+        elif self.variable:
+                self.variable.set(value, *args, **kwargs)
+        elif type(self.input).__name__.endswith('button'):
+            if value:
+                self.input.select()
+            else:
+                self.input.deselect()
+        # elif type(self.input) == tk.Text:
+        #     self.input.delete('1.0', tk.END)
+        #     self.input.insert('1.0', value)
+        else:
+            # self.input.delete(0, tk.END)
+            self.input.insert(0, value)
+
+class DataRecordForm(tk.Frame):
+    """The input form for our widgets"""
+
+    def __init__(self, parent, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        # A dict to keep track of input widgets
+        self.inputs = {}
+
+        # Build the form
+        # recordinfo section
+        recordinfo = tk.LabelFrame(self)
+
+        self.inputs['prjenable'] = LabelInput(
+            recordinfo,
+            input_class=ttk.Checkbutton,
+            input_var=tk.BooleanVar()
+        )
+        self.inputs['prjenable'].grid(row=0, column=0)
+        recordinfo.grid(row=0, column=0)
+
+        self.inputs['prjname'] = LabelInput(
+            recordinfo, "项目名称",
+            input_var=tk.StringVar()
+        )
+        self.inputs['prjname'].grid(row=0, column=1)
+
+        self.inputs['prjstatus'] = LabelInput(
+            recordinfo, "项目状态",
+            input_class=ttk.Combobox,
+            input_var=tk.StringVar(),
+            input_args={"values": ["评审中", "商务中", "开发中", "测试中"]}
+        )
+        self.inputs['prjstatus'].grid(row=0, column=2)
+
+        self.inputs['prjurl'] = LabelInput(
+            recordinfo, "项目中心地址",
+            input_var=tk.StringVar()
+        )
+        self.inputs['prjurl'].grid(row=0, column=3)
+
+        self.inputs['weburl'] = LabelInput(
+            recordinfo, "机器人地址",
+            input_var=tk.StringVar()
+        )
+        self.inputs['weburl'].grid(row=0, column=4)
+
+
+        self.inputs['webday'] = LabelInput(
+            recordinfo, "提醒星期",
+            input_class=ttk.Combobox,
+            input_var=tk.StringVar(),
+            input_args={"values": ["星期一", "星期二", "星期三", "星期四", "星期五"]}
+        )
+        self.inputs['webday'].grid(row=0, column=5)
+
+        self.inputs['webtime'] = LabelInput(
+            recordinfo, "提醒时间",
+            input_class=ttk.Combobox,
+            input_var=tk.StringVar(),
+            input_args={"values": ["9:00", "9:30", "10:00", "10:30", "11:00", "11:30","12:00", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30", "18:00"]}
+        )
+        self.inputs['webtime'].grid(row=0, column=6)
+
+    def get(self):
+        """Retrieve data from form as a dict"""
+
+        # We need to retrieve the data from Tkinter variables
+        # and place it in regular Python objects
+
+        data = {}
+        for key, widget in self.inputs.items():
+            data[key] = widget.get()
+        return data
+
+
+class Application(tk.Tk):
+    """Application root window"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.title("企业微信项目提醒")
+        self.resizable(width=False, height=False)
+
+        # count record number
+        self.count = 0		
+
+        ttk.Label(
+            self,
+            text="项目管理机器人信息表",
+            font=("TkDefaultFont", 16)
+        ).grid(row=0)
+
+        self.recordform = DataRecordForm(self)
+        self.recordform.grid(row=1, padx=10)
+
+        self.updatebutton = ttk.Button(self, text="增加", command=self.on_add)
+        self.updatebutton.grid(sticky=tk.W, row=2, padx=10)
+
+        self.surebutton = ttk.Button(self, text="确认", command=self.on_sure)
+        self.surebutton.grid(sticky=tk.E, row=2, padx=10)
+
+    def on_sure(self):
+        """Handles sure button clicks"""
+        data = self.recordform.get()
+
+        print("enter success!")
+        print(data)
+
+    def on_add(self):
+        """Handles add button clicks"""
+        self.count += 1
+
+        """ Update Record Form """
+        self.recordform = DataRecordForm(self)
+        self.recordform.grid(row=self.count+1, padx=10)
+
+        self.updatebutton = ttk.Button(self, text="增加", command=self.on_add)
+        self.updatebutton.grid(sticky=tk.W, row=self.count+2, padx=10)
+
+        self.surebutton = ttk.Button(self, text="确认", command=self.on_sure)
+        self.surebutton.grid(sticky=tk.E, row=self.count+2, padx=10)
+        print("add success!")
+        print(self.count)
+
+
+if __name__ == "__main__":
+
+    app = Application()
+    app.mainloop()
